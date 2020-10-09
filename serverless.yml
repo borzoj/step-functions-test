@@ -1,0 +1,56 @@
+service: step-functions
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: eu-west-1
+  stage: dev
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - states:StartExecution
+      Resource: "*"
+
+functions:
+  function-s3-event:
+    handler: handler-s3-event.main
+    events:
+      - s3:
+          bucket: sbx-testkits-tdl-results-michaljaworski
+          event: s3:ObjectCreated:*
+          existing: true
+    environment:
+      statemachine_arn: ${self:resources.Outputs.MyStateMachine.Value}
+  function-one:
+    handler: handler-one.main
+  function-two:
+    handler: handler-two.main
+
+
+stepFunctions:
+  stateMachines:
+    hellostepfunc1:
+      name: MyStateMachine
+      definition:
+        Comment: "A Hello World example of the Amazon States Language using an AWS Lambda Function"
+        StartAt: HelloWorld1
+        States:
+          HelloWorld1:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-function-one"
+            Next: HelloWorld2    
+          HelloWorld2:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-function-two"
+            End: true    
+
+resources:
+  Outputs:
+    MyStateMachine:
+      Description: The ARN of the example state machine
+      Value:
+        Ref: MyStateMachine
+
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters

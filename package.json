@@ -1,0 +1,12 @@
+{
+  "name": "step-functions",
+  "description": "",
+  "version": "0.1.0",
+  "dependencies": {
+    "aws-sdk": "^2.770.0"
+  },
+  "devDependencies": {
+    "serverless-pseudo-parameters": "^2.5.0",
+    "serverless-step-functions": "^2.26.0"
+  }
+}
