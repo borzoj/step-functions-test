@@ -10,21 +10,41 @@ provider:
       Action:
         - states:StartExecution
       Resource: "*"
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:GetObjectVersion
+      Resource: "arn:aws:s3:::${self:custom.bucket}/*"      
+    - Effect: Allow
+      Action:
+        - dynamodb:PutItem
+        - dynamodb:GetItem
+      Resource: "arn:aws:dynamodb:#{AWS::Region}:#{AWS::AccountId}:table/${self:custom.table}"
+      
+
+custom:
+  bucket: sbx-testkits-tdl-results-michaljaworski
+  table: "${opt:stage}-testkit-results"
 
 functions:
   function-s3-event:
     handler: handler-s3-event.main
     events:
       - s3:
-          bucket: sbx-testkits-tdl-results-michaljaworski
+          bucket: "${self:custom.bucket}"
           event: s3:ObjectCreated:*
           existing: true
     environment:
       statemachine_arn: ${self:resources.Outputs.MyStateMachine.Value}
   function-one:
     handler: handler-one.main
+    environment:
+      bucket: "${self:custom.bucket}"
+      table: "${self:custom.table}"
   function-two:
     handler: handler-two.main
+    environment:
+      table: "${self:custom.table}"
 
 
 stepFunctions:
@@ -50,6 +70,18 @@ resources:
       Description: The ARN of the example state machine
       Value:
         Ref: MyStateMachine
+  Resources:
+    ResultsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: "${self:custom.table}"
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
 
 plugins:
   - serverless-step-functions
